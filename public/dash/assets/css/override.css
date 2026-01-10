@@ -1,0 +1,10 @@
+.sidebar-wrapper .logo-wrapper {
+  background: #ffffff;
+}
+.sidebar-wrapper .logo-wrapper a img {
+  max-width: 120px;
+}
+.sidebar-wrapper .logo-icon-wrapper {
+  max-width: 30px;
+}
+/*# sourceMappingURL=override.css.map */
