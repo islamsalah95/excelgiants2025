@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\UploadedFile;
-use Spatie\MediaLibrary\MediaCollections\Models\Media; // Added for Media Library
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Jobs\ProcessMediaUploadJob;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductService
 {
@@ -35,16 +38,14 @@ class ProductService
         // Create product
         $product = Product::create($data);
 
-        // Handle main image upload
-        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            $product->addMedia($data['image'])
-                ->toMediaCollection('main_image');
+        // Handle main image via temp path
+        if (isset($data['temp_image']) && !empty($data['temp_image'])) {
+            $this->dispatchMediaJobFromPath($product, $data['temp_image'], 'main_image');
         }
 
-        // Handle download file upload
-        if (isset($data['download_file']) && $data['download_file'] instanceof UploadedFile) {
-            $product->addMedia($data['download_file'])
-                ->toMediaCollection('downloads');
+        // Handle download file via temp path
+        if (isset($data['temp_download_file']) && !empty($data['temp_download_file'])) {
+            $this->dispatchMediaJobFromPath($product, $data['temp_download_file'], 'downloads');
         }
 
         // Sync tags
@@ -66,18 +67,16 @@ class ProductService
             return false;
         }
 
-        // Handle main image upload (replaces existing)
-        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
+        // Handle main image via temp path
+        if (isset($data['temp_image']) && !empty($data['temp_image'])) {
             $product->clearMediaCollection('main_image');
-            $product->addMedia($data['image'])
-                ->toMediaCollection('main_image');
+            $this->dispatchMediaJobFromPath($product, $data['temp_image'], 'main_image');
         }
 
-        // Handle download file upload (replaces existing)
-        if (isset($data['download_file']) && $data['download_file'] instanceof UploadedFile) {
+        // Handle download file via temp path
+        if (isset($data['temp_download_file']) && !empty($data['temp_download_file'])) {
             $product->clearMediaCollection('downloads');
-            $product->addMedia($data['download_file'])
-                ->toMediaCollection('downloads');
+            $this->dispatchMediaJobFromPath($product, $data['temp_download_file'], 'downloads');
         }
 
         // Update product
@@ -107,9 +106,9 @@ class ProductService
     }
 
     /**
-     * Add product images (gallery)
+     * Add product images (gallery) via Job
      */
-    public function addProductImages(int $productId, array $images): void
+    public function addProductImages(int $productId, array $paths): void
     {
         $product = $this->getProductById($productId);
 
@@ -117,11 +116,28 @@ class ProductService
             return;
         }
 
-        foreach ($images as $image) {
-            if ($image instanceof UploadedFile) {
-                $product->addMedia($image)
-                    ->toMediaCollection('gallery');
+        foreach ($paths as $path) {
+            if (!empty($path)) {
+                $this->dispatchMediaJobFromPath($product, $path, 'gallery');
             }
+        }
+    }
+
+    /**
+     * Helper to dispatch process job from existing temp path
+     */
+    protected function dispatchMediaJobFromPath($model, string $path, string $collection)
+    {
+        if (Storage::disk('local')->exists($path)) {
+            $originalName = basename($path); // We could store real names if needed, but for now basename works
+
+            ProcessMediaUploadJob::dispatch(
+                $model,
+                $path,
+                $collection,
+                $originalName,
+                'local'
+            );
         }
     }
 

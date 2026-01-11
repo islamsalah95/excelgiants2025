@@ -56,19 +56,19 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'price' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0|max:100',
             'rating' => 'nullable|numeric|min:0|max:5',
             'is_free' => 'nullable|boolean',
             'is_program' => 'nullable|boolean',
-            'download_file' => 'nullable|file|max:51200',
             'download_link' => 'nullable|url',
             'is_active' => 'nullable|boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
-            'gallery_images' => 'nullable|array',
-            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'temp_image' => 'nullable|string',
+            'temp_download_file' => 'nullable|string',
+            'temp_gallery_images' => 'nullable|array',
+            'temp_gallery_images.*' => 'string',
         ]);
 
         $validated['is_free'] = $request->has('is_free');
@@ -78,8 +78,8 @@ class ProductController extends Controller
         $product = $this->productService->createProduct($validated);
 
         // Handle gallery images
-        if ($request->hasFile('gallery_images')) {
-            $this->productService->addProductImages($product->id, $request->file('gallery_images'));
+        if ($request->has('temp_gallery_images')) {
+            $this->productService->addProductImages($product->id, $request->input('temp_gallery_images'));
         }
 
         return redirect()->route('products.index')
@@ -126,19 +126,19 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'price' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0|max:100',
             'rating' => 'nullable|numeric|min:0|max:5',
             'is_free' => 'nullable|boolean',
             'is_program' => 'nullable|boolean',
-            'download_file' => 'nullable|file|max:51200',
             'download_link' => 'nullable|url',
             'is_active' => 'nullable|boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
-            'gallery_images' => 'nullable|array',
-            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'temp_image' => 'nullable|string',
+            'temp_download_file' => 'nullable|string',
+            'temp_gallery_images' => 'nullable|array',
+            'temp_gallery_images.*' => 'string',
         ]);
 
         $validated['is_free'] = $request->has('is_free');
@@ -152,8 +152,8 @@ class ProductController extends Controller
         }
 
         // Handle gallery images
-        if ($request->hasFile('gallery_images')) {
-            $this->productService->addProductImages($id, $request->file('gallery_images'));
+        if ($request->has('temp_gallery_images')) {
+            $this->productService->addProductImages($id, $request->input('temp_gallery_images'));
         }
 
         return redirect()->route('products.index')

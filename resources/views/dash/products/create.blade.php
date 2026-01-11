@@ -115,7 +115,7 @@
                                                 <p>Drop main image here or click to upload</p>
                                             </div>
                                         </div>
-                                        <input type="hidden" name="image" id="image_path">
+                                        <div id="main-image-hidden"></div>
                                         @error('image')
                                             <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
@@ -130,6 +130,7 @@
                                                 <p>Drop gallery images here or click to upload</p>
                                             </div>
                                         </div>
+                                        <div id="gallery-hidden"></div>
                                         @error('gallery_images')
                                             <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
@@ -205,6 +206,7 @@
                                                 <p>Drop download file here or click to upload</p>
                                             </div>
                                         </div>
+                                        <div id="download-hidden"></div>
                                         @error('download_file')
                                             <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}
                                             </div>
@@ -276,27 +278,97 @@
 
             // Dropzones
             let mainImageDz = new Dropzone("#mainImageDropzone", {
-                url: "{{ route('products.store') }}", // Not used for auto-upload
-                autoProcessQueue: false,
+                url: "{{ route('media.upload') }}",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
                 maxFiles: 1,
+                maxFilesize: 5, // 5MB
                 acceptedFiles: "image/*",
-                addRemoveLinks: true
+                addRemoveLinks: true,
+                success: function(file, response) {
+                    $('#main-image-hidden').html(
+                        `<input type="hidden" name="temp_image" value="${response.path}">`);
+                    file.temp_path = response.path;
+                },
+                removedfile: function(file) {
+                    if (file.temp_path) {
+                        $.ajax({
+                            url: "{{ route('media.remove-temp') }}",
+                            method: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                path: file.temp_path
+                            }
+                        });
+                        $('#main-image-hidden').empty();
+                    }
+                    file.previewElement.remove();
+                }
             });
 
             let galleryDz = new Dropzone("#galleryDropzone", {
-                url: "{{ route('products.store') }}",
-                autoProcessQueue: false,
+                url: "{{ route('media.upload') }}",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
                 maxFiles: 10,
+                maxFilesize: 15, // 15MB
                 acceptedFiles: "image/*",
                 addRemoveLinks: true,
-                uploadMultiple: true
+                uploadMultiple: false, // Upload one by one to handle temp paths easier
+                success: function(file, response) {
+                    $('#gallery-hidden').append(
+                        `<input type="hidden" name="temp_gallery_images[]" value="${response.path}" data-name="${file.name}">`
+                        );
+                    file.temp_path = response.path;
+                },
+                removedfile: function(file) {
+                    if (file.temp_path) {
+                        $.ajax({
+                            url: "{{ route('media.remove-temp') }}",
+                            method: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                path: file.temp_path
+                            }
+                        });
+                        $(`#gallery-hidden input[data-name="${file.name}"]`).remove();
+                    }
+                    file.previewElement.remove();
+                }
             });
 
             let downloadDz = new Dropzone("#downloadFileDropzone", {
-                url: "{{ route('products.store') }}",
-                autoProcessQueue: false,
+                url: "{{ route('media.upload') }}",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
                 maxFiles: 1,
-                addRemoveLinks: true
+                maxFilesize: 100, // 100MB
+                addRemoveLinks: true,
+                chunking: true,
+                forceChunking: true,
+                chunkSize: 2000000, // 2MB
+                success: function(file, response) {
+                    $('#download-hidden').html(
+                        `<input type="hidden" name="temp_download_file" value="${response.path}">`);
+                    file.temp_path = response.path;
+                },
+                removedfile: function(file) {
+                    if (file.temp_path) {
+                        $.ajax({
+                            url: "{{ route('media.remove-temp') }}",
+                            method: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                path: file.temp_path
+                            }
+                        });
+                        $('#download-hidden').empty();
+                    }
+                    file.previewElement.remove();
+                }
             });
 
             // Form Submit Interception
@@ -305,22 +377,7 @@
                 let form = this;
                 let formData = new FormData(form);
 
-                // Add Main Image
-                if (mainImageDz.getAcceptedFiles().length > 0) {
-                    formData.append('image', mainImageDz.getAcceptedFiles()[0]);
-                }
-
-                // Add Gallery Images
-                galleryDz.getAcceptedFiles().forEach(function(file) {
-                    formData.append('gallery_images[]', file);
-                });
-
-                // Add Download File
-                if (downloadDz.getAcceptedFiles().length > 0) {
-                    formData.append('download_file', downloadDz.getAcceptedFiles()[0]);
-                }
-
-                // Show loading state if needed
+                // Show loading state
                 let submitBtn = $(form).find('button[type="submit"]');
                 let originalText = submitBtn.html();
                 submitBtn.prop('disabled', true).html(
@@ -340,15 +397,19 @@
 
                         if (xhr.status === 422) {
                             let errors = xhr.responseJSON.errors;
-                            // Clear previous errors
                             $(".text-danger").remove();
                             $(".is-invalid").removeClass("is-invalid");
 
                             $.each(errors, function(key, value) {
                                 let input = $('[name="' + key + '"]');
-                                if (key.includes('.')) {
-                                    // Handle array errors like gallery_images.0
+                                // Map validation errors for temp files to their respective dropzones
+                                if (key === 'temp_gallery_images' || key.startsWith(
+                                        'temp_gallery_images.')) {
                                     input = $('#galleryDropzone');
+                                } else if (key === 'temp_image') {
+                                    input = $('#mainImageDropzone');
+                                } else if (key === 'temp_download_file') {
+                                    input = $('#downloadFileDropzone');
                                 }
 
                                 if (input.length) {
@@ -356,22 +417,9 @@
                                     input.after(
                                         '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
                                         value[0] + '</div>');
-                                } else if (key === 'image') {
-                                    $('#mainImageDropzone').after(
-                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
-                                        value[0] + '</div>');
-                                } else if (key === 'download_file') {
-                                    $('#downloadFileDropzone').after(
-                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
-                                        value[0] + '</div>');
-                                } else if (key === 'gallery_images') {
-                                    $('#galleryDropzone').after(
-                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
-                                        value[0] + '</div>');
                                 }
                             });
 
-                            // Scroll to first error
                             $('html, body').animate({
                                 scrollTop: $(".text-danger").first().offset().top - 100
                             }, 500);
@@ -384,3 +432,4 @@
         });
     </script>
 @endsection
+```

@@ -16,6 +16,83 @@ class MediaController extends Controller
     }
 
     /**
+     * Upload temporary media (supports chunking)
+     */
+    public function upload(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $file = $request->file('file');
+        $chunkIndex = $request->input('dzchunkindex');
+        $totalChunks = $request->input('dztotalchunkcount');
+        $uuid = $request->input('dzuuid');
+
+        if ($totalChunks > 1) {
+            $tempPath = "temp/chunks/{$uuid}";
+            $chunkName = "{$chunkIndex}.part";
+
+            \Illuminate\Support\Facades\Storage::disk('local')->putFileAs($tempPath, $file, $chunkName);
+
+            // Check if all chunks are uploaded
+            $chunks = \Illuminate\Support\Facades\Storage::disk('local')->files($tempPath);
+            if (count($chunks) == $totalChunks) {
+                // Merge chunks
+                $finalName = \Illuminate\Support\Str::random(40) . '.' . $request->input('dzfilename');
+                $finalDir = 'temp/' . date('Y-m-d');
+                $finalPath = "{$finalDir}/{$finalName}";
+
+                if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($finalDir)) {
+                    \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory($finalDir);
+                }
+
+                $out = fopen(\Illuminate\Support\Facades\Storage::disk('local')->path($finalPath), "wb");
+                for ($i = 0; $i < $totalChunks; $i++) {
+                    $chunkFile = \Illuminate\Support\Facades\Storage::disk('local')->path("{$tempPath}/{$i}.part");
+                    $in = fopen($chunkFile, "rb");
+                    while ($buff = fread($in, 4096)) {
+                        fwrite($out, $buff);
+                    }
+                    fclose($in);
+                    @unlink($chunkFile);
+                }
+                fclose($out);
+                \Illuminate\Support\Facades\Storage::disk('local')->deleteDirectory($tempPath);
+
+                return response()->json([
+                    'path' => $finalPath,
+                    'name' => $request->input('dzfilename'),
+                    'success' => true
+                ]);
+            }
+
+            return response()->json(['chunk' => $chunkIndex, 'success' => true]);
+        }
+
+        // Single file upload
+        $tempDir = 'temp/' . date('Y-m-d');
+        $tempName = \Illuminate\Support\Str::random(40) . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs($tempDir, $tempName, 'local');
+
+        return response()->json([
+            'path' => $path,
+            'name' => $file->getClientOriginalName(),
+            'success' => true
+        ]);
+    }
+
+    /**
+     * Remove temporary media
+     */
+    public function removeTemp(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $path = $request->input('path');
+        if ($path && \Illuminate\Support\Facades\Storage::disk('local')->exists($path)) {
+            \Illuminate\Support\Facades\Storage::disk('local')->delete($path);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Path not found'], 404);
+    }
+
+    /**
      * Remove the specified media from storage
      */
     public function destroy(int $id): JsonResponse
