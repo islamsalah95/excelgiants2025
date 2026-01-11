@@ -13,3 +13,5 @@ Route::get('/home', function () {
 Route::resource('categories', CategoryController::class);
 Route::resource('tags', TagController::class);
 Route::resource('products', ProductController::class);
+Route::delete('media/{id}', [App\Http\Controllers\Dash\MediaController::class, 'destroy'])->name('media.destroy');
+

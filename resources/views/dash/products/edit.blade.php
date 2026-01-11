@@ -1,5 +1,33 @@
 @extends('dash.layouts.main')
 
+@section('css')
+    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/select2.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/dropzone.css') }}">
+    <style>
+        .dropzone {
+            border: 2px dashed #7366ff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fe;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .dropzone.dz-clickable .dz-message {
+            cursor: pointer;
+            margin: 0;
+            font-weight: 600;
+            color: #7366ff;
+        }
+    </style>
+@endsection
+
+
 @section('content')
     <div class="container-fluid">
         <div class="page-title">
@@ -28,7 +56,7 @@
                         <h4>Product Information</h4>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('products.update', $product->id) }}" method="POST"
+                        <form id="productForm" action="{{ route('products.update', $product->id) }}" method="POST"
                             enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
@@ -82,47 +110,52 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="image" class="form-label">Main Image</label>
-                                        @if ($product->getFirstMediaUrl('main_image'))
-                                            <div class="mb-2"><img src="{{ $product->getFirstMediaUrl('main_image') }}"
-                                                    alt="{{ $product->name }}"
-                                                    style="width: 100px; height: 100px; object-fit: cover;" class="rounded">
+                                        <label class="form-label">Main Image</label>
+                                        <div class="dropzone" id="mainImageDropzone">
+                                            <div class="dz-message">
+                                                <i class="fa fa-cloud-upload fa-3x mb-2"></i>
+                                                <p>Drop main image here or click to upload</p>
                                             </div>
-                                        @endif
-                                        <input type="file" class="form-control @error('image') is-invalid @enderror"
-                                            id="image" name="image" accept="image/*">
+                                        </div>
                                         @error('image')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="gallery_images" class="form-label">Add Gallery Images</label>
-                                        <input type="file"
-                                            class="form-control @error('gallery_images') is-invalid @enderror"
-                                            id="gallery_images" name="gallery_images[]" accept="image/*" multiple>
+                                        <label class="form-label">Add Gallery Images</label>
+                                        <div class="dropzone" id="galleryDropzone">
+                                            <div class="dz-message">
+                                                <i class="fa fa-images fa-3x mb-2"></i>
+                                                <p>Drop gallery images here or click to upload</p>
+                                            </div>
+                                        </div>
                                         @error('gallery_images')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                             </div>
 
                             @if ($product->getMedia('gallery')->count() > 0)
-                                <div class="row">
+                                <div class="row mb-3">
                                     <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label class="form-label">Current Gallery Images</label>
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                @foreach ($product->getMedia('gallery') as $media)
-                                                    <div class="position-relative">
-                                                        <img src="{{ $media->getUrl() }}" alt="Gallery"
-                                                            style="width: 80px; height: 80px; object-fit: cover;"
-                                                            class="rounded">
-                                                    </div>
-                                                @endforeach
-                                            </div>
+                                        <label class="form-label">Current Gallery Images</label>
+                                        <div id="gallery-preview" class="d-flex gap-2 flex-wrap">
+                                            @foreach ($product->getMedia('gallery') as $media)
+                                                <div class="position-relative gallery-item" data-id="{{ $media->id }}">
+                                                    <img src="{{ $media->getUrl() }}" alt="Gallery"
+                                                        style="width: 100px; height: 100px; object-fit: cover;"
+                                                        class="rounded border">
+                                                    <button type="button"
+                                                        class="btn btn-danger btn-xs position-absolute top-0 end-0 delete-media"
+                                                        data-id="{{ $media->id }}"
+                                                        style="padding: 2px 5px; font-size: 10px;">
+                                                        <i class="fa fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            @endforeach
                                         </div>
                                     </div>
                                 </div>
@@ -191,16 +224,22 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="download_file" class="form-label">Download File</label>
+                                        <label class="form-label">Download File</label>
+                                        <div class="dropzone" id="downloadFileDropzone">
+                                            <div class="dz-message">
+                                                <i class="fa fa-file-download fa-3x mb-2"></i>
+                                                <p>Drop download file here or click to upload</p>
+                                            </div>
+                                        </div>
                                         @if ($product->getFirstMedia('downloads'))
-                                            <div class="mb-2"><span class="badge badge-info">Current:
-                                                    {{ $product->getFirstMedia('downloads')->file_name }}</span></div>
+                                            <div class="mt-2 text-muted">
+                                                <small>Current file:
+                                                    {{ $product->getFirstMedia('downloads')->file_name }}</small>
+                                            </div>
                                         @endif
-                                        <input type="file"
-                                            class="form-control @error('download_file') is-invalid @enderror"
-                                            id="download_file" name="download_file">
                                         @error('download_file')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}
+                                            </div>
                                         @enderror
                                     </div>
                                 </div>
@@ -247,4 +286,167 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <script src="{{ asset('dash/assets/js/select2/select2.full.min.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/dropzone/dropzone.js') }}"></script>
+    <script>
+        Dropzone.autoDiscover = false;
+
+        $(document).ready(function() {
+            // Select2
+            $('#category_id').select2({
+                placeholder: "Select Category",
+                allowClear: true,
+                width: '100%'
+            });
+            $('#tags').select2({
+                placeholder: "Select Tags",
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Dropzones
+            let mainImageDz = new Dropzone("#mainImageDropzone", {
+                url: "{{ route('products.update', $product->id) }}",
+                autoProcessQueue: false,
+                maxFiles: 1,
+                acceptedFiles: "image/*",
+                addRemoveLinks: true,
+                init: function() {
+                    @if ($product->getFirstMediaUrl('main_image'))
+                        let mockFile = {
+                            name: "Current Image",
+                            size: 12345,
+                            accepted: true
+                        };
+                        this.displayExistingFile(mockFile,
+                            "{{ $product->getFirstMediaUrl('main_image') }}");
+                    @endif
+                }
+            });
+
+            let galleryDz = new Dropzone("#galleryDropzone", {
+                url: "{{ route('products.update', $product->id) }}",
+                autoProcessQueue: false,
+                maxFiles: 10,
+                acceptedFiles: "image/*",
+                addRemoveLinks: true,
+                uploadMultiple: true
+            });
+
+            let downloadDz = new Dropzone("#downloadFileDropzone", {
+                url: "{{ route('products.update', $product->id) }}",
+                autoProcessQueue: false,
+                maxFiles: 1,
+                addRemoveLinks: true
+            });
+
+            // Form Submit Interception
+            $("#productForm").on("submit", function(e) {
+                e.preventDefault();
+                let form = this;
+                let formData = new FormData(form);
+
+                // Add Main Image (only if a new one is added)
+                if (mainImageDz.getAcceptedFiles().length > 0) {
+                    if (mainImageDz.getAcceptedFiles()[0] instanceof File) {
+                        formData.append('image', mainImageDz.getAcceptedFiles()[0]);
+                    }
+                }
+
+                // Add Gallery Images
+                galleryDz.getAcceptedFiles().forEach(function(file) {
+                    if (file instanceof File) {
+                        formData.append('gallery_images[]', file);
+                    }
+                });
+
+                // Add Download File
+                if (downloadDz.getAcceptedFiles().length > 0 && downloadDz.getAcceptedFiles()[
+                        0] instanceof File) {
+                    formData.append('download_file', downloadDz.getAcceptedFiles()[0]);
+                }
+
+                // Show loading state
+                let submitBtn = $(form).find('button[type="submit"]');
+                let originalText = submitBtn.html();
+                submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Updating...');
+
+                $.ajax({
+                    url: $(form).attr('action'),
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        window.location.href = "{{ route('products.index') }}";
+                    },
+                    error: function(xhr) {
+                        submitBtn.prop('disabled', false).html(originalText);
+
+                        if (xhr.status === 422) {
+                            let errors = xhr.responseJSON.errors;
+                            $(".text-danger").remove();
+                            $(".is-invalid").removeClass("is-invalid");
+
+                            $.each(errors, function(key, value) {
+                                let input = $('[name="' + key + '"]');
+                                if (key.includes('.')) {
+                                    input = $('#galleryDropzone');
+                                }
+
+                                if (input.length) {
+                                    input.addClass("is-invalid");
+                                    input.after(
+                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
+                                        value[0] + '</div>');
+                                } else if (key === 'image') {
+                                    $('#mainImageDropzone').after(
+                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
+                                        value[0] + '</div>');
+                                } else if (key === 'download_file') {
+                                    $('#downloadFileDropzone').after(
+                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
+                                        value[0] + '</div>');
+                                } else if (key === 'gallery_images') {
+                                    $('#galleryDropzone').after(
+                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
+                                        value[0] + '</div>');
+                                }
+                            });
+
+                            $('html, body').animate({
+                                scrollTop: $(".text-danger").first().offset().top - 100
+                            }, 500);
+                        } else {
+                            alert('An error occurred. Please try again.');
+                        }
+                    }
+                });
+            });
+            // Delete Existing Media
+            $(document).on("click", ".delete-media", function() {
+                let btn = $(this);
+                let id = btn.data("id");
+
+                if (confirm("Are you sure you want to delete this image?")) {
+                    $.ajax({
+                        url: "{{ url('media') }}/" + id,
+                        method: 'DELETE',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            btn.closest(".gallery-item").remove();
+                        },
+                        error: function() {
+                            alert("Failed to delete media.");
+                        }
+                    });
+                }
+            });
+        });
+    </script>
 @endsection
