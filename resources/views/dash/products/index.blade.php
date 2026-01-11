@@ -115,6 +115,10 @@
                                                     class="btn btn-sm btn-primary" title="Edit">
                                                     <i class="fa fa-edit"></i>
                                                 </a>
+                                                <a href="{{ route('products.upload-download', $product->id) }}"
+                                                    class="btn btn-sm btn-warning" title="Upload Download File">
+                                                    <i class="fa fa-upload"></i>
+                                                </a>
                                                 <form action="{{ route('products.destroy', $product->id) }}" method="POST"
                                                     class="d-inline"
                                                     onsubmit="return confirm('Are you sure you want to delete this product?');">

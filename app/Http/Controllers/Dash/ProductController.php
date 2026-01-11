@@ -66,7 +66,6 @@ class ProductController extends Controller
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
             'temp_image' => 'nullable|string',
-            'temp_download_file' => 'nullable|string',
             'temp_gallery_images' => 'nullable|array',
             'temp_gallery_images.*' => 'string',
         ]);
@@ -82,8 +81,37 @@ class ProductController extends Controller
             $this->productService->addProductImages($product->id, $request->input('temp_gallery_images'));
         }
 
+        return redirect()->route('products.upload-download', $product->id)
+            ->with('success', 'Product details saved. Now please upload the download file.');
+    }
+
+    /**
+     * Show the form to upload download file
+     */
+    public function uploadDownloadForm(int $id): View
+    {
+        $product = $this->productService->getProductById($id);
+
+        if (!$product) {
+            abort(404, 'Product not found');
+        }
+
+        return view('dash.products.upload_download', compact('product'));
+    }
+
+    /**
+     * Save the download file for a product
+     */
+    public function saveDownloadFile(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'temp_download_file' => 'required|string',
+        ]);
+
+        $this->productService->updateProductDownloadFile($id, $validated['temp_download_file']);
+
         return redirect()->route('products.index')
-            ->with('success', 'Product created successfully!');
+            ->with('success', 'Download file uploaded and product finalized!');
     }
 
     /**

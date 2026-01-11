@@ -198,20 +198,6 @@
 
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Download File</label>
-                                        <div class="dropzone" id="downloadFileDropzone">
-                                            <div class="dz-message">
-                                                <i class="fa fa-file-download fa-3x mb-2"></i>
-                                                <p>Drop download file here or click to upload</p>
-                                            </div>
-                                        </div>
-                                        <div id="download-hidden"></div>
-                                        @error('download_file')
-                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}
-                                            </div>
-                                        @enderror
-                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -320,7 +306,7 @@
                 success: function(file, response) {
                     $('#gallery-hidden').append(
                         `<input type="hidden" name="temp_gallery_images[]" value="${response.path}" data-name="${file.name}">`
-                        );
+                    );
                     file.temp_path = response.path;
                 },
                 removedfile: function(file) {
@@ -339,38 +325,6 @@
                 }
             });
 
-            let downloadDz = new Dropzone("#downloadFileDropzone", {
-                url: "{{ route('media.upload') }}",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                maxFiles: 1,
-                maxFilesize: 100, // 100MB
-                addRemoveLinks: true,
-                chunking: true,
-                forceChunking: true,
-                chunkSize: 2000000, // 2MB
-                success: function(file, response) {
-                    $('#download-hidden').html(
-                        `<input type="hidden" name="temp_download_file" value="${response.path}">`);
-                    file.temp_path = response.path;
-                },
-                removedfile: function(file) {
-                    if (file.temp_path) {
-                        $.ajax({
-                            url: "{{ route('media.remove-temp') }}",
-                            method: 'DELETE',
-                            data: {
-                                _token: "{{ csrf_token() }}",
-                                path: file.temp_path
-                            }
-                        });
-                        $('#download-hidden').empty();
-                    }
-                    file.previewElement.remove();
-                }
-            });
-
             // Form Submit Interception
             $("#productForm").on("submit", function(e) {
                 e.preventDefault();
@@ -381,7 +335,7 @@
                 let submitBtn = $(form).find('button[type="submit"]');
                 let originalText = submitBtn.html();
                 submitBtn.prop('disabled', true).html(
-                '<i class="fa fa-spinner fa-spin"></i> Submitting...');
+                    '<i class="fa fa-spinner fa-spin"></i> Submitting...');
 
                 $.ajax({
                     url: $(form).attr('action'),

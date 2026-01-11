@@ -91,6 +91,25 @@ class ProductService
     }
 
     /**
+     * Update only the download file for a product
+     */
+    public function updateProductDownloadFile(int $id, string $tempPath): bool
+    {
+        $product = $this->getProductById($id);
+
+        if (!$product) {
+            return false;
+        }
+
+        if (!empty($tempPath)) {
+            $product->clearMediaCollection('downloads');
+            $this->dispatchMediaJobFromPath($product, $tempPath, 'downloads');
+        }
+
+        return true;
+    }
+
+    /**
      * Delete product
      */
     public function deleteProduct(int $id): bool
