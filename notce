@@ -1,0 +1,12 @@
+need to create full feature for categories 
+start from migrashion and model then 
+start from create service have all need func for crud operashion then 
+controller in filder Dash user the service for full crud operashion 
+then create view in filder Dash
+the view have all need design and func for crud operashion 
+and must is have same layout here 
+@extends('dash.layouts.main')
+@section('content')
+@endsection
+use index tabel mirror for design  tabel Row Create Callback in public\dash\template\datatable-advance.html
+ 
