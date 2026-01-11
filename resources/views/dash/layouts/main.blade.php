@@ -16,8 +16,6 @@
     <!-- Google font-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&amp;display=swap"
-        rel="stylesheet">
     @include('dash.layouts.partial.css.header_css')
     @yield('css')
 </head>

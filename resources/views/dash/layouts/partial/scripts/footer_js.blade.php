@@ -16,20 +16,11 @@
     <script src="{{ asset('dash/assets/js/slick/slick.min.js') }}"></script>
     <script src="{{ asset('dash/assets/js/slick/slick.js') }}"></script>
     <script src="{{ asset('dash/assets/js/header-slick.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/apex-chart/apex-chart.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/apex-chart/stock-prices.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/apex-chart/moment.min.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/esl.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/config.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/pie-chart/facePrint.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/pie-chart/testHelper.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/pie-chart/custom-transition-texture.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/chart/echart/data/symbols.js') }}"></script>
     <!-- calendar js-->
-    <script src="{{ asset('dash/assets/js/datepicker/date-picker/datepicker.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/datepicker/date-picker/datepicker.en.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/datepicker/date-picker/datepicker.custom.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/dashboard/dashboard_3.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/datatable/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/datatable/datatables/datatable.custom1.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/datatable/datatable_advance.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/tooltip-init.js') }}"></script>
     <!-- Plugins JS Ends-->
     <!-- Theme js-->
     <script src="{{ asset('dash/assets/js/script.js') }}"></script>

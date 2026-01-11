@@ -1,4 +1,7 @@
-need to create full feature for categories 
+need to create full feature for products this product must belong to category 
+product have name and image a and description  and can be have price or free and discount and rating 
+Photo gallery for product  this product maybe is program so want upload file  or link to download
+product can be have tags so use many to many relation for tags to assign tags to product within create product form
 start from migrashion and model then 
 start from create service have all need func for crud operashion then 
 controller in filder Dash user the service for full crud operashion 
@@ -8,5 +11,11 @@ and must is have same layout here
 @extends('dash.layouts.main')
 @section('content')
 @endsection
-use index tabel mirror for design  tabel Row Create Callback in public\dash\template\datatable-advance.html
- 
+use index tabel mirror for design  tabel have title Row Create Callback in this file public\dash\template\datatable-advance.html
+
+ssh -p 65002 u884802793@45.84.205.109
+@Islam_Salah1995
+cd domains/lightseagreen-dotterel-841113.hostingersite.com/public_html
+git pull origin main 
+
+select2.html

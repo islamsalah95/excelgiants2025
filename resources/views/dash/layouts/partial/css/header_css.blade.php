@@ -1,3 +1,7 @@
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&amp;display=swap"
+        rel="stylesheet">    
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&amp;display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/font-awesome.css') }}">
     <!-- ico-font-->
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/icofont.css') }}">
@@ -12,8 +16,7 @@
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/slick-theme.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/scrollbar.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/animate.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/echart.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/date-picker.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/datatables.css') }}">
     <!-- Plugins css Ends-->
     <!-- Bootstrap css-->
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/bootstrap.css') }}">
