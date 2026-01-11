@@ -25,7 +25,7 @@ class MediaController extends Controller
         $totalChunks = $request->input('dztotalchunkcount');
         $uuid = $request->input('dzuuid');
 
-        if ($totalChunks > 1) {
+        if ($totalChunks !== null) {
             $tempPath = "temp/chunks/{$uuid}";
             $chunkName = "{$chunkIndex}.part";
 
@@ -35,7 +35,9 @@ class MediaController extends Controller
             $chunks = \Illuminate\Support\Facades\Storage::disk('local')->files($tempPath);
             if (count($chunks) == $totalChunks) {
                 // Merge chunks
-                $finalName = \Illuminate\Support\Str::random(40) . '.' . $request->input('dzfilename');
+                $originalName = $request->input('dzfilename');
+                $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+                $finalName = \Illuminate\Support\Str::random(40) . ($extension ? '.' . $extension : '');
                 $finalDir = 'temp/' . date('Y-m-d');
                 $finalPath = "{$finalDir}/{$finalName}";
 
@@ -46,6 +48,7 @@ class MediaController extends Controller
                 $out = fopen(\Illuminate\Support\Facades\Storage::disk('local')->path($finalPath), "wb");
                 for ($i = 0; $i < $totalChunks; $i++) {
                     $chunkFile = \Illuminate\Support\Facades\Storage::disk('local')->path("{$tempPath}/{$i}.part");
+                    // Wait slightly if file is still being written by another process (unlikely but possible)
                     $in = fopen($chunkFile, "rb");
                     while ($buff = fread($in, 4096)) {
                         fwrite($out, $buff);
@@ -58,7 +61,7 @@ class MediaController extends Controller
 
                 return response()->json([
                     'path' => $finalPath,
-                    'name' => $request->input('dzfilename'),
+                    'name' => $originalName,
                     'success' => true
                 ]);
             }
