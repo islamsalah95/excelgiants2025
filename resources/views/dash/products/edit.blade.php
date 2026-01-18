@@ -2,31 +2,7 @@
 
 @section('css')
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/select2.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/dropzone.css') }}">
-    <style>
-        .dropzone {
-            border: 2px dashed #7366ff;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            background: #f8f9fe;
-            min-height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            cursor: pointer;
-        }
-
-        .dropzone.dz-clickable .dz-message {
-            cursor: pointer;
-            margin: 0;
-            font-weight: 600;
-            color: #7366ff;
-        }
-    </style>
 @endsection
-
 
 @section('content')
     <div class="container-fluid">
@@ -110,58 +86,40 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Main Image</label>
-                                        <div class="dropzone" id="mainImageDropzone">
-                                            <div class="dz-message">
-                                                <i class="fa fa-cloud-upload fa-3x mb-2"></i>
-                                                <p>Drop main image here or click to upload</p>
+                                        <label for="image" class="form-label">Main Image</label>
+                                        <input type="file" class="form-control @error('image') is-invalid @enderror"
+                                            id="image" name="image" accept="image/*">
+                                        @if ($product->getFirstMediaUrl('main_image'))
+                                            <div class="mt-2">
+                                                <img src="{{ $product->getFirstMediaUrl('main_image') }}"
+                                                    alt="Current Image" width="100" class="rounded">
                                             </div>
-                                        </div>
-                                        <div id="main-image-hidden"></div>
+                                        @endif
                                         @error('image')
-                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
+                                            <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Add Gallery Images</label>
-                                        <div class="dropzone" id="galleryDropzone">
-                                            <div class="dz-message">
-                                                <i class="fa fa-images fa-3x mb-2"></i>
-                                                <p>Drop gallery images here or click to upload</p>
+                                        <label for="gallery_images" class="form-label">Gallery Images</label>
+                                        <input type="file"
+                                            class="form-control @error('gallery_images') is-invalid @enderror"
+                                            id="gallery_images" name="gallery_images[]" accept="image/*" multiple>
+                                        @if ($product->getMedia('gallery')->count() > 0)
+                                            <div class="mt-2 d-flex gap-2">
+                                                @foreach ($product->getMedia('gallery') as $media)
+                                                    <img src="{{ $media->getUrl() }}" alt="Gallery" width="60"
+                                                        height="60" class="rounded object-fit-cover">
+                                                @endforeach
                                             </div>
-                                        </div>
-                                        <div id="gallery-hidden"></div>
+                                        @endif
                                         @error('gallery_images')
-                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
+                                            <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                             </div>
-
-                            @if ($product->getMedia('gallery')->count() > 0)
-                                <div class="row mb-3">
-                                    <div class="col-md-12">
-                                        <label class="form-label">Current Gallery Images</label>
-                                        <div id="gallery-preview" class="d-flex gap-2 flex-wrap">
-                                            @foreach ($product->getMedia('gallery') as $media)
-                                                <div class="position-relative gallery-item" data-id="{{ $media->id }}">
-                                                    <img src="{{ $media->getUrl() }}" alt="Gallery"
-                                                        style="width: 100px; height: 100px; object-fit: cover;"
-                                                        class="rounded border">
-                                                    <button type="button"
-                                                        class="btn btn-danger btn-xs position-absolute top-0 end-0 delete-media"
-                                                        data-id="{{ $media->id }}"
-                                                        style="padding: 2px 5px; font-size: 10px;">
-                                                        <i class="fa fa-times"></i>
-                                                    </button>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
 
                             <div class="row">
                                 <div class="col-md-3">
@@ -225,26 +183,6 @@
 
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Download File</label>
-                                        <div class="dropzone" id="downloadFileDropzone">
-                                            <div class="dz-message">
-                                                <i class="fa fa-file-download fa-3x mb-2"></i>
-                                                <p>Drop download file here or click to upload</p>
-                                            </div>
-                                        </div>
-                                        <div id="download-hidden"></div>
-                                        @error('download_file')
-                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}
-                                            </div>
-                                        @enderror
-                                        @if ($product->getFirstMedia('downloads'))
-                                            <div class="mt-2 text-muted">
-                                                <small>Current file:
-                                                    {{ $product->getFirstMedia('downloads')->file_name }}</small>
-                                            </div>
-                                        @endif
-                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -293,10 +231,7 @@
 
 @section('js')
     <script src="{{ asset('dash/assets/js/select2/select2.full.min.js') }}"></script>
-    <script src="{{ asset('dash/assets/js/dropzone/dropzone.js') }}"></script>
     <script>
-        Dropzone.autoDiscover = false;
-
         $(document).ready(function() {
             // Select2
             $('#category_id').select2({
@@ -310,109 +245,6 @@
                 width: '100%'
             });
 
-            // Dropzones
-            let mainImageDz = new Dropzone("#mainImageDropzone", {
-                url: "{{ route('media.upload') }}",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                maxFiles: 1,
-                maxFilesize: 5, // 5MB
-                acceptedFiles: "image/*",
-                addRemoveLinks: true,
-                init: function() {
-                    @if ($product->getFirstMediaUrl('main_image'))
-                        let mockFile = {
-                            name: "Current Image",
-                            size: 12345,
-                            accepted: true
-                        };
-                        this.displayExistingFile(mockFile,
-                            "{{ $product->getFirstMediaUrl('main_image') }}");
-                    @endif
-                },
-                success: function(file, response) {
-                    $('#main-image-hidden').html(
-                        `<input type="hidden" name="temp_image" value="${response.path}">`);
-                    file.temp_path = response.path;
-                },
-                removedfile: function(file) {
-                    if (file.temp_path) {
-                        $.ajax({
-                            url: "{{ route('media.remove-temp') }}",
-                            method: 'DELETE',
-                            data: {
-                                _token: "{{ csrf_token() }}",
-                                path: file.temp_path
-                            }
-                        });
-                        $('#main-image-hidden').empty();
-                    }
-                    file.previewElement.remove();
-                }
-            });
-
-            let galleryDz = new Dropzone("#galleryDropzone", {
-                url: "{{ route('media.upload') }}",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                maxFiles: 10,
-                maxFilesize: 15, // 15MB
-                acceptedFiles: "image/*",
-                addRemoveLinks: true,
-                uploadMultiple: false,
-                success: function(file, response) {
-                    $('#gallery-hidden').append(
-                        `<input type="hidden" name="temp_gallery_images[]" value="${response.path}" data-name="${file.name}">`
-                        );
-                    file.temp_path = response.path;
-                },
-                removedfile: function(file) {
-                    if (file.temp_path) {
-                        $.ajax({
-                            url: "{{ route('media.remove-temp') }}",
-                            method: 'DELETE',
-                            data: {
-                                _token: "{{ csrf_token() }}",
-                                path: file.temp_path
-                            }
-                        });
-                        $(`#gallery-hidden input[data-name="${file.name}"]`).remove();
-                    }
-                    file.previewElement.remove();
-                }
-            });
-
-            let downloadDz = new Dropzone("#downloadFileDropzone", {
-                url: "{{ route('media.upload') }}",
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                maxFiles: 1,
-                maxFilesize: 100, // 100MB
-                addRemoveLinks: true,
-                success: function(file, response) {
-                    $('#download-hidden').html(
-                        `<input type="hidden" name="temp_download_file" value="${response.path}">`);
-                    file.temp_path = response.path;
-                },
-                removedfile: function(file) {
-                    if (file.temp_path) {
-                        $.ajax({
-                            url: "{{ route('media.remove-temp') }}",
-                            method: 'DELETE',
-                            data: {
-                                _token: "{{ csrf_token() }}",
-                                path: file.temp_path
-                            }
-                        });
-                        $('#download-hidden').empty();
-                    }
-                    file.previewElement.remove();
-                }
-            });
-
             // Form Submit Interception
             $("#productForm").on("submit", function(e) {
                 e.preventDefault();
@@ -422,11 +254,12 @@
                 // Show loading state
                 let submitBtn = $(form).find('button[type="submit"]');
                 let originalText = submitBtn.html();
-                submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Updating...');
+                submitBtn.prop('disabled', true).html(
+                    '<i class="fa fa-spinner fa-spin"></i> Updating...');
 
                 $.ajax({
                     url: $(form).attr('action'),
-                    method: 'POST',
+                    method: 'POST', // Form spoofing will handle PUT
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -443,52 +276,23 @@
 
                             $.each(errors, function(key, value) {
                                 let input = $('[name="' + key + '"]');
-                                if (key === 'temp_gallery_images' || key.startsWith(
-                                        'temp_gallery_images.')) {
-                                    input = $('#galleryDropzone');
-                                } else if (key === 'temp_image') {
-                                    input = $('#mainImageDropzone');
-                                } else if (key === 'temp_download_file') {
-                                    input = $('#downloadFileDropzone');
-                                }
 
                                 if (input.length) {
                                     input.addClass("is-invalid");
                                     input.after(
-                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
+                                        '<div class="invalid-feedback d-block">' +
                                         value[0] + '</div>');
                                 }
                             });
 
                             $('html, body').animate({
-                                scrollTop: $(".text-danger").first().offset().top - 100
+                                scrollTop: $(".is-invalid").first().offset().top - 100
                             }, 500);
                         } else {
                             alert('An error occurred. Please try again.');
                         }
                     }
                 });
-            });
-            // Delete Existing Media
-            $(document).on("click", ".delete-media", function() {
-                let btn = $(this);
-                let id = btn.data("id");
-
-                if (confirm("Are you sure you want to delete this image?")) {
-                    $.ajax({
-                        url: "{{ url('media') }}/" + id,
-                        method: 'DELETE',
-                        data: {
-                            _token: "{{ csrf_token() }}"
-                        },
-                        success: function(response) {
-                            btn.closest(".gallery-item").remove();
-                        },
-                        error: function() {
-                            alert("Failed to delete media.");
-                        }
-                    });
-                }
             });
         });
     </script>

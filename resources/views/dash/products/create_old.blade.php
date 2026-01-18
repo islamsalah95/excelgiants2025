@@ -2,7 +2,29 @@
 
 @section('css')
     <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/select2.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('dash/assets/css/vendors/dropzone.css') }}">
+    <style>
+        .dropzone {
+            border: 2px dashed #7366ff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fe;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+        }
 
+        .dropzone.dz-clickable .dz-message {
+            cursor: pointer;
+            margin: 0;
+            font-weight: 600;
+            color: #7366ff;
+        }
+    </style>
 @endsection
 
 
@@ -86,21 +108,31 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="image" class="form-label">Main Image</label>
-                                        <input type="file" class="form-control @error('image') is-invalid @enderror" 
-                                            id="image" name="image" accept="image/*">
+                                        <label class="form-label">Main Image</label>
+                                        <div class="dropzone" id="mainImageDropzone">
+                                            <div class="dz-message">
+                                                <i class="fa fa-cloud-upload fa-3x mb-2"></i>
+                                                <p>Drop main image here or click to upload</p>
+                                            </div>
+                                        </div>
+                                        <div id="main-image-hidden"></div>
                                         @error('image')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="gallery_images" class="form-label">Gallery Images</label>
-                                        <input type="file" class="form-control @error('gallery_images') is-invalid @enderror" 
-                                            id="gallery_images" name="gallery_images[]" accept="image/*" multiple>
+                                        <label class="form-label">Gallery Images</label>
+                                        <div class="dropzone" id="galleryDropzone">
+                                            <div class="dz-message">
+                                                <i class="fa fa-images fa-3x mb-2"></i>
+                                                <p>Drop gallery images here or click to upload</p>
+                                            </div>
+                                        </div>
+                                        <div id="gallery-hidden"></div>
                                         @error('gallery_images')
-                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            <div class="text-danger mt-1" style="font-size: 0.875em;">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
@@ -213,7 +245,10 @@
 
 @section('js')
     <script src="{{ asset('dash/assets/js/select2/select2.full.min.js') }}"></script>
+    <script src="{{ asset('dash/assets/js/dropzone/dropzone.js') }}"></script>
     <script>
+        Dropzone.autoDiscover = false;
+
         $(document).ready(function() {
             // Select2
             $('#category_id').select2({
@@ -225,6 +260,69 @@
                 placeholder: "Select Tags",
                 allowClear: true,
                 width: '100%'
+            });
+
+            // Dropzones
+            let mainImageDz = new Dropzone("#mainImageDropzone", {
+                url: "{{ route('media.upload') }}",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
+                maxFiles: 1,
+                maxFilesize: 5, // 5MB
+                acceptedFiles: "image/*",
+                addRemoveLinks: true,
+                success: function(file, response) {
+                    $('#main-image-hidden').html(
+                        `<input type="hidden" name="temp_image" value="${response.path}">`);
+                    file.temp_path = response.path;
+                },
+                removedfile: function(file) {
+                    if (file.temp_path) {
+                        $.ajax({
+                            url: "{{ route('media.remove-temp') }}",
+                            method: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                path: file.temp_path
+                            }
+                        });
+                        $('#main-image-hidden').empty();
+                    }
+                    file.previewElement.remove();
+                }
+            });
+
+            let galleryDz = new Dropzone("#galleryDropzone", {
+                url: "{{ route('media.upload') }}",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
+                maxFiles: 10,
+                maxFilesize: 15, // 15MB
+                acceptedFiles: "image/*",
+                addRemoveLinks: true,
+                uploadMultiple: false, // Upload one by one to handle temp paths easier
+                success: function(file, response) {
+                    $('#gallery-hidden').append(
+                        `<input type="hidden" name="temp_gallery_images[]" value="${response.path}" data-name="${file.name}">`
+                    );
+                    file.temp_path = response.path;
+                },
+                removedfile: function(file) {
+                    if (file.temp_path) {
+                        $.ajax({
+                            url: "{{ route('media.remove-temp') }}",
+                            method: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                path: file.temp_path
+                            }
+                        });
+                        $(`#gallery-hidden input[data-name="${file.name}"]`).remove();
+                    }
+                    file.previewElement.remove();
+                }
             });
 
             // Form Submit Interception
@@ -258,17 +356,26 @@
 
                             $.each(errors, function(key, value) {
                                 let input = $('[name="' + key + '"]');
-                                
+                                // Map validation errors for temp files to their respective dropzones
+                                if (key === 'temp_gallery_images' || key.startsWith(
+                                        'temp_gallery_images.')) {
+                                    input = $('#galleryDropzone');
+                                } else if (key === 'temp_image') {
+                                    input = $('#mainImageDropzone');
+                                } else if (key === 'temp_download_file') {
+                                    input = $('#downloadFileDropzone');
+                                }
+
                                 if (input.length) {
                                     input.addClass("is-invalid");
                                     input.after(
-                                        '<div class="invalid-feedback d-block">' +
+                                        '<div class="text-danger mt-1" style="font-size: 0.875em;">' +
                                         value[0] + '</div>');
                                 }
                             });
 
                             $('html, body').animate({
-                                scrollTop: $(".is-invalid").first().offset().top - 100
+                                scrollTop: $(".text-danger").first().offset().top - 100
                             }, 500);
                         } else {
                             alert('An error occurred. Please try again.');

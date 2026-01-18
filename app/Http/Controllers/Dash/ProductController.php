@@ -66,9 +66,9 @@ class ProductController extends Controller
             'is_active' => 'nullable|boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
-            'temp_image' => 'nullable|string',
-            'temp_gallery_images' => 'nullable|array',
-            'temp_gallery_images.*' => 'string',
+            'image' => 'nullable|image|max:5120', // 5MB max
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'image|max:15360', // 15MB max
         ]);
 
         $validated['is_free'] = $request->has('is_free');
@@ -77,9 +77,18 @@ class ProductController extends Controller
 
         $product = $this->productService->createProduct($validated);
 
-        // Handle gallery images
-        if ($request->has('temp_gallery_images')) {
-            $this->productService->addProductImages($product->id, $request->input('temp_gallery_images'));
+        // Handle main image upload using Spatie Media
+        if ($request->hasFile('image')) {
+            $product->addMedia($request->file('image'))
+                ->toMediaCollection('main_image');
+        }
+
+        // Handle gallery images using Spatie Media
+        if ($request->hasFile('gallery_images')) {
+            foreach ($request->file('gallery_images') as $galleryFile) {
+                $product->addMedia($galleryFile)
+                    ->toMediaCollection('gallery');
+            }
         }
 
         return redirect()->route('products.upload-download', $product->id)
@@ -101,76 +110,38 @@ class ProductController extends Controller
     }
 
     /**
-     * Save the download file for a product (supports chunking)
+     * Save the download file for a product
      */
     public function saveDownloadFile(Request $request, int $id): JsonResponse
     {
-        $file = $request->file('file');
-        if (!$file) {
-            return response()->json(['error' => 'No file uploaded'], 400);
-        }
-
-        $chunkIndex = $request->input('dzchunkindex');
-        $totalChunks = $request->input('dztotalchunkcount');
-        $uuid = $request->input('dzuuid');
-
-        if ($totalChunks !== null) {
-            $tempPath = "temp/chunks/{$uuid}";
-            $chunkName = "{$chunkIndex}.part";
-
-            \Illuminate\Support\Facades\Storage::disk('local')->putFileAs($tempPath, $file, $chunkName);
-
-            // Check if all chunks are uploaded
-            $chunks = \Illuminate\Support\Facades\Storage::disk('local')->files($tempPath);
-            if (count($chunks) == $totalChunks) {
-                // Merge chunks
-                $originalName = $request->input('dzfilename') ?? $file->getClientOriginalName();
-                $extension = pathinfo($originalName, PATHINFO_EXTENSION);
-                $finalName = \Illuminate\Support\Str::random(40) . ($extension ? '.' . $extension : '');
-                $finalDir = 'temp/' . date('Y-m-d');
-                $finalPath = "{$finalDir}/{$finalName}";
-
-                if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($finalDir)) {
-                    \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory($finalDir);
-                }
-
-                $out = fopen(\Illuminate\Support\Facades\Storage::disk('local')->path($finalPath), "wb");
-                for ($i = 0; $i < $totalChunks; $i++) {
-                    $chunkFile = \Illuminate\Support\Facades\Storage::disk('local')->path("{$tempPath}/{$i}.part");
-                    $in = fopen($chunkFile, "rb");
-                    while ($buff = fread($in, 4096)) {
-                        fwrite($out, $buff);
-                    }
-                    fclose($in);
-                    @unlink($chunkFile);
-                }
-                fclose($out);
-                \Illuminate\Support\Facades\Storage::disk('local')->deleteDirectory($tempPath);
-
-                // Finalize product attachment
-                $this->productService->updateProductDownloadFile($id, $finalPath);
-
-                return response()->json([
-                    'path' => $finalPath,
-                    'success' => true
-                ]);
-            }
-
-            return response()->json(['chunk' => $chunkIndex, 'success' => true]);
-        }
-
-        // Single file upload
-        $tempDir = 'temp/' . date('Y-m-d');
-        $tempName = \Illuminate\Support\Str::random(40) . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs($tempDir, $tempName, 'local');
-
-        // Finalize product attachment
-        $this->productService->updateProductDownloadFile($id, $path);
-
-        return response()->json([
-            'path' => $path,
-            'success' => true
+        $validated = $request->validate([
+            'file' => 'required|file|max:512000', // 500MB = 512000 KB
         ]);
+
+        $product = $this->productService->getProductById($id);
+
+        if (!$product) {
+            return response()->json(['error' => 'Product not found'], 404);
+        }
+
+        try {
+            // Clear existing download file
+            $product->clearMediaCollection('downloads');
+
+            // Add new download file using Spatie Media
+            $product->addMedia($request->file('file'))
+                ->toMediaCollection('downloads');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File uploaded successfully!'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Download file upload error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to upload file: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -222,10 +193,9 @@ class ProductController extends Controller
             'is_active' => 'nullable|boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
-            'temp_image' => 'nullable|string',
-            'temp_download_file' => 'nullable|string',
-            'temp_gallery_images' => 'nullable|array',
-            'temp_gallery_images.*' => 'string',
+            'image' => 'nullable|image|max:5120', // 5MB max
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'image|max:15360', // 15MB max
         ]);
 
         $validated['is_free'] = $request->has('is_free');
@@ -238,9 +208,24 @@ class ProductController extends Controller
             return redirect()->back()->with('error', 'Product not found');
         }
 
-        // Handle gallery images
-        if ($request->has('temp_gallery_images')) {
-            $this->productService->addProductImages($id, $request->input('temp_gallery_images'));
+        // Get the product for media handling
+        $product = $this->productService->getProductById($id);
+
+        // Handle main image upload using Spatie Media
+        if ($request->hasFile('image')) {
+            // Clear existing main image
+            $product->clearMediaCollection('main_image');
+            // Add new main image
+            $product->addMedia($request->file('image'))
+                ->toMediaCollection('main_image');
+        }
+
+        // Handle gallery images using Spatie Media
+        if ($request->hasFile('gallery_images')) {
+            foreach ($request->file('gallery_images') as $galleryFile) {
+                $product->addMedia($galleryFile)
+                    ->toMediaCollection('gallery');
+            }
         }
 
         return redirect()->route('products.index')
